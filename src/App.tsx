@@ -1,26 +1,70 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, {useEffect, useState} from 'react';
 import './App.css';
+import axios from 'axios'
+import PokemonColection from "./components/pokemonColection";
+import {Detail, Pokemon} from "./Interface";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+//F.C Functional Component
+interface Pokemons {
+    name: string,
+    url: string;
+}
+
+const App: React.FC = () => {
+    //<Type> them type no vao
+    const [pokemons, setPokemons] = useState<Pokemon[]>([]);
+    const [nextUrl, setNextUrl] = useState<string>("");
+    const [loading, setLoanding] = useState<boolean>(true);
+    const [viewDetail, setDetail] = useState<Detail>({
+        id: 0,
+        isOpen: false,
+    })
+    useEffect(() => {
+        const getPokemon = async () => {
+            const res = await axios.get("https://pokeapi.co/api/v2/pokemon?limit=20&offset=20")
+            setNextUrl(res.data.next);
+            res.data.results.forEach(async (pokemon: Pokemons) => {
+                const poke = await axios.get(
+                    `https://pokeapi.co/api/v2/pokemon/${pokemon.name}`
+                );
+                // chuyen tu object thanh array
+                setPokemons((p) => [...p, poke.data]);
+            });
+        }
+        getPokemon();
+        setLoanding(false);
+    }, [])
+    const handleNextPage = async () => {
+        setLoanding(true);
+        let res = await axios.get(nextUrl);
+        setNextUrl(res.data.next)
+        res.data.results.forEach(async (pokemon: Pokemons) => {
+            const poke = await axios.get(
+                `https://pokeapi.co/api/v2/pokemon/${pokemon.name}`
+            );
+            setPokemons((p) => [...p, poke.data]);
+            setLoanding(false)
+        })
+    }
+    return (
+        <div className="App">
+            <div className="container">
+                <header className="pokemon-header">
+                    Pokemon
+                </header>
+                <PokemonColection
+                    pokemons={pokemons}
+                    viewDetail={viewDetail}
+                    setDetail={setDetail}
+                />
+                {!viewDetail.isOpen &&
+                <button className=" btn btn-primary"
+                        onClick={handleNextPage}
+                >{loading ? "Loading..." : "Load more"}</button>
+                }
+            </div>
+        </div>
+    );
 }
 
 export default App;
